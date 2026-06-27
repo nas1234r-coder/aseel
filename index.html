@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>أصل الدائرة بما يناسبها</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-green: #e8fcd4;
+            --secondary-green: #dbf7b3;
+            --yellow-box: #fff3c9;
+            --yellow-border: #ffd54f;
+            --text-color: #1e293b;
+            --red-accent: #e2231a;
+            --check-blue: #2196f3;
+            --blue-dot: #1aace0;
+            --orange-dot: #ff8c00;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* لمنع السكرول تماماً */
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--primary-green) 0%, var(--secondary-green) 100%);
+            font-family: 'Noto Naskh Arabic', serif;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .app-container {
+            background-color: transparent;
+            width: 100%;
+            max-width: 1200px; 
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+        }
+
+        /* رأس السؤال */
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            background-color: #fffde7;
+            border: 3px dashed #ffd54f;
+            border-radius: 20px;
+            padding: 12px 20px;
+            flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            z-index: 10;
+        }
+
+        .instruction-desc {
+            font-size: clamp(1.4rem, 3.5vw, 2.4rem);
+            color: var(--text-color);
+            margin: 0;
+            font-weight: 700;
+        }
+
+        .colored { color: var(--red-accent); }
+
+        /* منطقة اللعب */
+        .game-board {
+            position: relative;
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            min-height: 0; /* يمنع التمدد للخارج */
+            z-index: 5;
+        }
+
+        .svg-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* جعل الخطوط قابلة للنقر */
+        .svg-overlay line {
+            pointer-events: stroke;
+            cursor: pointer;
+            transition: stroke-width 0.2s;
+        }
+
+        .svg-overlay line:hover {
+            stroke-width: 9;
+        }
+
+        .matching-grid {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 95%;
+            height: 100%;
+            position: relative;
+            z-index: 2;
+            padding: 5px 0;
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-evenly; /* توزيع متساوٍ لمنع التداخل */
+            height: 100%;
+        }
+
+        #right-column {
+            width: 42%;
+            align-items: center;
+        }
+
+        #left-column {
+            width: 48%;
+            align-items: flex-end;
+        }
+
+        /* أزرار الشخصيات (الصور) - محاذاة آمنة */
+        .char-box {
+            width: 100%;
+            height: 45%; /* تحديد أقصى ارتفاع مسموح */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* الحاوية الذكية للصورة لربط النقطة بحافتها */
+        .img-wrapper {
+            position: relative;
+            height: 100%;
+            max-width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .img-wrapper img {
+            height: 100%;
+            max-height: 220px; /* ضمان عدم خروجها عن الحدود */
+            width: auto;
+            max-width: 100%; /* لا تتجاوز عرض عمودها أبداً */
+            object-fit: contain;
+            border-radius: 16px;
+            pointer-events: none;
+            filter: drop-shadow(0 6px 12px rgba(0,0,0,0.15));
+        }
+
+        /* أزرار الجمل (النصوص) */
+        .statement-box {
+            background-color: var(--yellow-box);
+            border: 4px solid var(--yellow-border);
+            border-radius: 20px;
+            width: 100%;
+            height: 26%;
+            max-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 6px 0 rgba(255, 213, 79, 0.4);
+            padding: 10px;
+            text-align: center;
+            font-size: clamp(1.3rem, 3.2vw, 2.4rem);
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .red-meem { color: var(--red-accent); }
+
+        /* النقاط التفاعلية */
+        .dot {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #ffffff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .dot::after {
+            content: '';
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+        }
+
+        /* التصاق النقطة الصفراء تماماً بحافة الحاوية الذكية للصورة */
+        .orange-btn-dot { border: 4px solid var(--orange-dot); left: -14px; }
+        .orange-btn-dot::after { background-color: var(--orange-dot); }
+
+        /* التصاق النقطة الزرقاء بحافة المربع اليمنى */
+        .blue-btn-dot { border: 4px solid var(--blue-dot); right: -16px; }
+        .blue-btn-dot::after { background-color: var(--blue-dot); }
+
+        .dot.snap-hover {
+            transform: translateY(-50%) scale(1.4);
+            box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.7), 0 0 15px 3px rgba(33, 150, 243, 0.5);
+        }
+
+        .dot.locked { cursor: default; }
+
+        /* شريط الأزرار السفلي */
+        .action-bar {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-shrink: 0;
+            padding: 8px 0;
+            z-index: 10; /* إبقاؤه دائماً في الأعلى */
+        }
+
+        .action-btn {
+            border: none;
+            border-radius: 15px;
+            font-family: 'Noto Naskh Arabic', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            padding: 12px 30px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: transform 0.1s ease;
+        }
+
+        .action-btn:active { transform: scale(0.95); }
+
+        .check-btn {
+            background: linear-gradient(180deg, #64b5f6 0%, var(--check-blue) 100%);
+            color: #ffffff;
+            box-shadow: 0 5px 0 #0d47a1;
+        }
+
+        .replay-btn {
+            background: linear-gradient(180deg, #6ee06e 0%, #2e9b3e 100%);
+            color: #ffffff;
+            box-shadow: 0 5px 0 #1f7a2c;
+        }
+
+        #confetti-canvas {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        @keyframes errorShake {
+            0%, 100% { transform: translate(0, 0); }
+            20%, 60% { transform: translate(-5px, 0); }
+            40%, 80% { transform: translate(5px, 0); }
+        }
+
+        .error-line-animate {
+            animation: errorShake 0.4s ease-in-out;
+        }
+
+        /* التجاوب مع شاشات الجوال */
+        @media (max-width: 768px) {
+            .statement-box { border-width: 3px; height: 28%; box-shadow: 0 4px 0 rgba(255, 213, 79, 0.4);}
+
+            /* فراغ حقيقي بين العمودين بدل التلامس */
+            .matching-grid {
+                width: 100%;
+                justify-content: space-between;
+                gap: 24px;
+            }
+            #right-column { width: 32%; }
+            #left-column { width: 50%; }
+
+            .dot { width: 24px; height: 24px; }
+            .dot::after { width: 11px; height: 11px; }
+
+            /* تصغير بروز النقاط نحو المنتصف لإبعادها عن خط التماس */
+            .orange-btn-dot { left: -6px; }
+            .blue-btn-dot { right: -8px; }
+
+            .action-btn { font-size: 1.2rem; padding: 10px 15px; }
+            .img-wrapper img { max-height: 160px; }
+        }
+
+        /* شاشات صغيرة جداً: مزيد من الفراغ والتصغير */
+        @media (max-width: 480px) {
+            .matching-grid { gap: 30px; }
+            #right-column { width: 30%; }
+            #left-column { width: 48%; }
+            .dot { width: 20px; height: 20px; }
+            .dot::after { width: 9px; height: 9px; }
+            .orange-btn-dot { left: -4px; }
+            .blue-btn-dot { right: -6px; }
+            .img-wrapper img { max-height: 130px; }
+            .statement-box { font-size: clamp(1.1rem, 4vw, 1.6rem); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    
+    <audio id="success-audio" src="audio.mp3"></audio>
+
+    <div class="header-container">
+        <p class="instruction-desc">
+            ١. <span class="colored">أَصِلُ</span> الدَّائِرَةَ بِمَا يُنَاسِبُهَا:
+        </p>
+    </div>
+
+    <div class="game-board" id="game-board">
+        <svg class="svg-overlay" id="svg-overlay"></svg>
+
+        <div class="matching-grid">
+            <div class="column" id="right-column">
+                <div class="char-box" data-char="majid">
+                    <div class="img-wrapper">
+                        <img src="1.png" alt="قال ماجد">
+                        <div class="dot orange-btn-dot" data-type="char" data-id="char-majid"></div>
+                    </div>
+                </div>
+                <div class="char-box" data-char="maria">
+                    <div class="img-wrapper">
+                        <img src="2.png" alt="قالت مارية">
+                        <div class="dot orange-btn-dot" data-type="char" data-id="char-maria"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="column" id="left-column">
+                <div class="statement-box" data-answer="maria">
+                    <span>أُ<span class="red-meem">مِّ</span>ي تُحَضِّرُ الطَّعَا<span class="red-meem">مَ</span>.</span>
+                    <div class="dot blue-btn-dot" data-type="stmt" data-id="stmt-1"></div>
+                </div>
+                <div class="statement-box" data-answer="majid">
+                    <span>اليَوْ<span class="red-meem">مُ</span> يَوْ<span class="red-meem">مُ</span> الجُ<span class="red-meem">مُ</span>عَةِ.</span>
+                    <div class="dot blue-btn-dot" data-type="stmt" data-id="stmt-2"></div>
+                </div>
+                <div class="statement-box" data-answer="maria">
+                    <span>أُخْتِي <span class="red-meem">مِ</span>يعَادُ تُنَظِّفُ ال<span class="red-meem">مَ</span>نْزِلَ.</span>
+                    <div class="dot blue-btn-dot" data-type="stmt" data-id="stmt-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <canvas id="confetti-canvas"></canvas>
+    </div>
+
+    <div class="action-bar">
+        <button class="action-btn check-btn" id="check-btn" type="button">
+            ✓ تَحَقَّقْ
+        </button>
+        <button class="action-btn replay-btn" id="replay-btn" type="button">
+            ↻ إِعَادَة
+        </button>
+    </div>
+
+</div>
+
+<script>
+    const board = document.getElementById('game-board');
+    const svg = document.getElementById('svg-overlay');
+    const dots = document.querySelectorAll('.dot');
+    const successAudio = document.getElementById('success-audio');
+
+    let isDrawing = false;
+    let startDot = null;
+    let tempLine = null;
+    let currentConnections = [];
+    let permanentCorrectCount = 0;
+
+    const getDotCenter = (dotEl) => {
+        const boardRect = board.getBoundingClientRect();
+        const dotRect = dotEl.getBoundingClientRect();
+        return {
+            x: dotRect.left - boardRect.left + (dotRect.width / 2),
+            y: dotRect.top - boardRect.top + (dotRect.height / 2)
+        };
+    };
+
+    const startDraw = (e) => {
+        const dot = e.target;
+        if (dot.classList.contains('locked')) return;
+
+        if (dot.getAttribute('data-type') === 'stmt') {
+            removeConnectionByStatement(dot);
+        }
+
+        isDrawing = true;
+        startDot = dot;
+
+        const center = getDotCenter(dot);
+
+        tempLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        tempLine.setAttribute('x1', center.x);
+        tempLine.setAttribute('y1', center.y);
+        tempLine.setAttribute('x2', center.x);
+        tempLine.setAttribute('y2', center.y);
+        tempLine.setAttribute('stroke', 'rgba(100, 181, 246, 0.8)');
+        tempLine.setAttribute('stroke-width', '6');
+        tempLine.setAttribute('stroke-linecap', 'round');
+        tempLine.setAttribute('stroke-dasharray', '10 5');
+        svg.appendChild(tempLine);
+    };
+
+    const SNAP_RADIUS = 60; 
+
+    const findNearestDot = (clientX, clientY) => {
+        let nearestDot = null;
+        let nearestDist = Infinity;
+
+        dots.forEach(dot => {
+            if (dot === startDot || dot.classList.contains('locked')) return;
+            const rect = dot.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            const dist = Math.hypot(clientX - cx, clientY - cy);
+            if (dist <= SNAP_RADIUS && dist < nearestDist) {
+                nearestDist = dist;
+                nearestDot = dot;
+            }
+        });
+        return nearestDot;
+    };
+
+    const moveDraw = (e) => {
+        if (!isDrawing || !tempLine) return;
+        e.preventDefault();
+
+        const boardRect = board.getBoundingClientRect();
+        let clientX, clientY;
+
+        if (e.touches) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+
+        tempLine.setAttribute('x2', clientX - boardRect.left);
+        tempLine.setAttribute('y2', clientY - boardRect.top);
+
+        const hovered = findNearestDot(clientX, clientY);
+        dots.forEach(d => {
+            if (d === hovered && d.getAttribute('data-type') !== startDot.getAttribute('data-type')) {
+                d.classList.add('snap-hover');
+            } else {
+                d.classList.remove('snap-hover');
+            }
+        });
+    };
+
+    const endDraw = (e) => {
+        if (!isDrawing) return;
+        isDrawing = false;
+
+        if (tempLine) {
+            tempLine.remove();
+            tempLine = null;
+        }
+
+        dots.forEach(d => d.classList.remove('snap-hover'));
+
+        let clientX, clientY;
+        if (e.changedTouches) {
+            clientX = e.changedTouches[0].clientX;
+            clientY = e.changedTouches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+
+        const targetDot = findNearestDot(clientX, clientY);
+
+        if (targetDot && targetDot !== startDot && !targetDot.classList.contains('locked')) {
+            if (startDot.getAttribute('data-type') !== targetDot.getAttribute('data-type')) {
+                
+                const stmtDot = startDot.getAttribute('data-type') === 'stmt' ? startDot : targetDot;
+                const charDot = startDot.getAttribute('data-type') === 'char' ? startDot : targetDot;
+
+                // إزالة أي خط سابق متصل بهذه العبارة
+                removeConnectionByStatement(stmtDot);
+
+                const startCenter = getDotCenter(startDot);
+                const targetCenter = getDotCenter(targetDot);
+
+                const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', startCenter.x);
+                line.setAttribute('y1', startCenter.y);
+                line.setAttribute('x2', targetCenter.x);
+                line.setAttribute('y2', targetCenter.y);
+                line.setAttribute('stroke', '#4caf50'); 
+                line.setAttribute('stroke-width', '6');
+                line.setAttribute('stroke-linecap', 'round');
+                
+                line.addEventListener('click', () => {
+                    if(!stmtDot.classList.contains('locked')) {
+                        removeConnectionByStatement(stmtDot);
+                    }
+                });
+
+                polyline.appendChild(line);
+                svg.appendChild(polyline);
+
+                currentConnections.push({
+                    stmtDot: stmtDot,
+                    charDot: charDot,
+                    groupElement: polyline,
+                    lineElement: line
+                });
+            }
+        }
+        startDot = null;
+    };
+
+    const removeConnectionByStatement = (stmtDot) => {
+        const index = currentConnections.findIndex(c => c.stmtDot === stmtDot);
+        if (index !== -1) {
+            currentConnections[index].groupElement.remove();
+            currentConnections.splice(index, 1);
+        }
+    };
+
+    document.getElementById('check-btn').addEventListener('click', () => {
+        if (currentConnections.length === 0 && permanentCorrectCount === 3) return;
+
+        let itemsToDelete = [];
+
+        currentConnections.forEach((conn, index) => {
+            // الوصول إلى data-char من خلال الجد (char-box) وليس الأب المباشر بسبب إضافة الـ wrapper
+            const characterChosen = conn.charDot.closest('.char-box').getAttribute('data-char');
+            const correctAnswer = conn.stmtDot.closest('.statement-box').getAttribute('data-answer');
+
+            if (correctAnswer === characterChosen) {
+                conn.lineElement.setAttribute('stroke', '#2e9b3e'); 
+                conn.lineElement.setAttribute('stroke-width', '8');
+                conn.lineElement.style.pointerEvents = 'none'; 
+                conn.stmtDot.classList.add('locked');
+                
+                permanentCorrectCount++;
+                itemsToDelete.push(index);
+            } else {
+                conn.lineElement.setAttribute('stroke', 'var(--red-accent)');
+                conn.groupElement.classList.add('error-line-animate');
+                
+                const x1 = parseFloat(conn.lineElement.getAttribute('x1'));
+                const y1 = parseFloat(conn.lineElement.getAttribute('y1'));
+                const x2 = parseFloat(conn.lineElement.getAttribute('x2'));
+                const y2 = parseFloat(conn.lineElement.getAttribute('y2'));
+                const midX = (x1 + x2) / 2;
+                const midY = (y1 + y2) / 2;
+
+                const textX = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                textX.setAttribute('x', midX);
+                textX.setAttribute('y', midY + 10);
+                textX.setAttribute('fill', 'var(--red-accent)');
+                textX.setAttribute('font-size', '30px');
+                textX.setAttribute('font-weight', 'bold');
+                textX.setAttribute('text-anchor', 'middle');
+                textX.textContent = '✕';
+                conn.groupElement.appendChild(textX);
+
+                setTimeout(() => {
+                    conn.groupElement.remove();
+                }, 1000);
+            }
+        });
+
+        currentConnections = currentConnections.filter((_, idx) => !itemsToDelete.includes(idx));
+
+        if (permanentCorrectCount === 3) {
+            setTimeout(() => {
+                triggerCelebration();
+                successAudio.currentTime = 0;
+                successAudio.play().catch(e => console.log("تحتاج لضغط المستخدم لتشغيل الصوت"));
+            }, 400);
+        }
+    });
+
+    dots.forEach(dot => {
+        dot.addEventListener('mousedown', startDraw);
+        dot.addEventListener('touchstart', startDraw, { passive: false });
+    });
+
+    window.addEventListener('mousemove', moveDraw);
+    window.addEventListener('touchmove', moveDraw, { passive: false });
+    window.addEventListener('mouseup', endDraw);
+    window.addEventListener('touchend', endDraw);
+
+    const resetLines = () => {
+        svg.innerHTML = '';
+        currentConnections = [];
+        permanentCorrectCount = 0;
+        document.querySelectorAll('.dot').forEach(d => d.classList.remove('locked'));
+    };
+
+    document.getElementById('replay-btn').addEventListener('click', resetLines);
+    window.addEventListener('resize', resetLines);
+
+    const canvas = document.getElementById('confetti-canvas');
+    const ctx = canvas.getContext('2d');
+    let confetti = [];
+
+    const triggerCelebration = () => {
+        canvas.width = board.clientWidth;
+        canvas.height = board.clientHeight;
+        confetti = [];
+        for (let i = 0; i < 100; i++) {
+            confetti.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height - canvas.height,
+                r: Math.random() * 6 + 4,
+                d: Math.random() * canvas.height,
+                color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+                tilt: Math.random() * 10 - 5
+            });
+        }
+        animateConfetti();
+    };
+
+    const animateConfetti = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let active = false;
+        confetti.forEach((p) => {
+            p.y += 3; 
+            if (p.y <= canvas.height) active = true;
+            ctx.beginPath();
+            ctx.lineWidth = p.r;
+            ctx.strokeStyle = p.color;
+            ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
+            ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2);
+            ctx.stroke();
+        });
+        if (active) requestAnimationFrame(animateConfetti);
+    };
+
+</script>
+
+</body>
+</html>
